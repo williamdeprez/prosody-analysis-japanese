@@ -2,12 +2,7 @@ import numpy as np
 import pandas as pd
 import librosa
 from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-audio_file = BASE_DIR / "data" / "raw_audio" / "jsut_ver1.1" / "jsut_ver1.1" / "voiceactress100" / "wav" / "VOICEACTRESS100_001.wav"
-output_file = BASE_DIR / "data" / "processed" / "example_pitch.csv"
-
+import matplotlib.pyplot as plt
 
 def extract_pitch(audio_path: Path, fmin: float = 75.0, fmax: float = 400.0, frame_length: int = 2048, hop_length: int = 256) -> pd.DataFrame:
     # Load audio
@@ -39,14 +34,57 @@ def extract_pitch(audio_path: Path, fmin: float = 75.0, fmax: float = 400.0, fra
 
     return df
 
+def clean_pitch(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+
+    df["f0_interpolation"] = df["f0"].interpolate(method="linear")
+
+    df["f0_interpolation"] = df["f0_interpolation"].bfill().ffill()
+
+    return df
+
+def normalize_time(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize time to [0, 1] range for better model training. Each sentence is treated as a separate sequence, so time is normalized within each sentence.
+    
+    :param df: Description
+    :type df: pd.DataFrame
+    :return: Description
+    :rtype: DataFrame
+    """
+    df = df.copy()
+    t_min = df["time"].min()
+    t_max = df["time"].max()
+
+    df["time_normalized"] = (df["time"] - t_min) / (t_max - t_min)
+    return df
+
+def plot_pitch(df: pd.DataFrame, title: str = "Pitch Contour") -> None:
+    plt.figure(figsize=(8, 4))
+    plt.plot(df["time_normalized"], df["f0_interpolation"])
+    plt.xlabel("Normalized Time")
+    plt.ylabel("F_0 (Hz)")
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
 
 def export_pitch_csv(df: pd.DataFrame, output_path: Path) -> None:
     df.to_csv(output_path, index=False)
 
 if __name__ == "__main__":
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    FILENAME = "VOICEACTRESS100_002.wav"
+
+    audio_file = BASE_DIR / "data" / "raw_audio" / "jsut_ver1.1" / "jsut_ver1.1" / "voiceactress100" / "wav" / FILENAME
+    output_file = BASE_DIR / "data" / "processed" / "example_pitch.csv"
+
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     df_pitch = extract_pitch(audio_file)
+    df_pitch = clean_pitch(df_pitch)
+    df_pitch = normalize_time(df_pitch)
+
+    plot_pitch(df_pitch, title=f"Pitch Contour for {FILENAME}")
 
     export_pitch_csv(df_pitch, output_file)
 

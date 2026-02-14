@@ -59,9 +59,25 @@ def normalize_time(df: pd.DataFrame) -> pd.DataFrame:
     df["time_normalized"] = (df["time"] - t_min) / (t_max - t_min)
     return df
 
-def plot_pitch(df: pd.DataFrame, title: str = "Pitch Contour") -> None:
+def resample_to_fixed_grid(df: pd.DataFrame, n_points: int = 100) -> pd.DataFrame:
+    df = df.copy()
+
+    grid = np.linspace(0, 1, n_points)
+
+    f0_resampled = np.interp(
+        grid,
+        df["time_normalized"],
+        df["f0_interpolation"]
+    )
+
+    return pd.DataFrame({
+        "time_normalized": grid,
+        "f0_resampled": f0_resampled
+    })
+
+def plot_pitch(df: pd.DataFrame, time_col: str, pitch_col: str, title: str = "Pitch Contour") -> None:
     plt.figure(figsize=(8, 4))
-    plt.plot(df["time_normalized"], df["f0_interpolation"])
+    plt.plot(df[time_col], df[pitch_col])
     plt.xlabel("Normalized Time")
     plt.ylabel("F_0 (Hz)")
     plt.title(title)
@@ -84,7 +100,24 @@ if __name__ == "__main__":
     df_pitch = clean_pitch(df_pitch)
     df_pitch = normalize_time(df_pitch)
 
-    plot_pitch(df_pitch, title=f"Pitch Contour for {FILENAME}")
+    df_resampled = resample_to_fixed_grid(df_pitch, n_points=100)
+    pitch_vector = df_resampled["f0_resampled"].values
+    print(pitch_vector.shape)
+
+
+    plot_pitch(
+        df_pitch, 
+        time_col="time_normalized", 
+        pitch_col="f0_interpolation", 
+        title=f"Original Normalized Contour for {FILENAME}"
+    )
+
+    plot_pitch(
+        df_resampled, 
+        time_col="time_normalized", 
+        pitch_col="f0_resampled", 
+        title=f"Resampled Contour for {FILENAME}"
+    )
 
     export_pitch_csv(df_pitch, output_file)
 

@@ -104,20 +104,36 @@ if __name__ == "__main__":
     pitch_vector = df_resampled["f0_resampled"].values
     print(pitch_vector.shape)
 
+    raw_dir = BASE_DIR / "data" / "raw_audio" / "jsut_ver1.1" / "jsut_ver1.1" / "voiceactress100" / "wav"
 
-    plot_pitch(
-        df_pitch, 
-        time_col="time_normalized", 
-        pitch_col="f0_interpolation", 
-        title=f"Original Normalized Contour for {FILENAME}"
-    )
+    wav_files = sorted(raw_dir.glob("*.wav"))[:20]
 
-    plot_pitch(
-        df_resampled, 
-        time_col="time_normalized", 
-        pitch_col="f0_resampled", 
-        title=f"Resampled Contour for {FILENAME}"
-    )
+    pitch_vectors = []
+
+    for wav_path in wav_files:
+        df_pitch = extract_pitch(wav_path)
+        df_pitch = clean_pitch(df_pitch)
+        df_pitch = normalize_time(df_pitch)
+        df_resampled = resample_to_fixed_grid(df_pitch, n_points=100)
+
+        pitch_vector = df_resampled["f0_resampled"].values
+        pitch_vectors.append(pitch_vector)
+
+    X = np.vstack(pitch_vectors)
+
+    print("Shape of dataset:", X.shape)
+    
+    mean_contour = X.mean(axis=0)
+
+    grid = np.linspace(0, 1, 100)
+
+    plt.figure(figsize=(8,4))
+    plt.plot(grid, mean_contour, linewidth=2)
+    plt.title("Mean Pitch Contour (20 Utterances)")
+    plt.xlabel("Normalized Time")
+    plt.ylabel("F0 (Hz)")
+    plt.tight_layout()
+    plt.show()
 
     export_pitch_csv(df_pitch, output_file)
 

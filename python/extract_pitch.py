@@ -75,6 +75,60 @@ def resample_to_fixed_grid(df: pd.DataFrame, n_points: int = 100) -> pd.DataFram
         "f0_resampled": f0_resampled
     })
 
+def process_utterance(audio_path: Path, n_points: int = 100) -> np.ndarray:
+    """
+    Uses the full pipeline to extract a fixed-length pitch contour vector from an audio file. This includes pitch extraction, cleaning, time normalization, and resampling to a fixed grid.
+    
+    :param audio_path: File path to the input audio file
+    :type audio_path: Path
+    :param n_points: Number of points in the fixed-length pitch contour
+    :type n_points: int
+    :return: Pitch contour vector of length n_points
+    :rtype: ndarray[_AnyShape, dtype[Any]]
+    """
+    df = extract_pitch(audio_path)
+    df = clean_pitch(df)
+    df = normalize_time(df)
+    df = resample_to_fixed_grid(df, n_points=n_points)
+
+    return df["f0_resampled"].to_numpy(dtype=float)
+
+def build_dataset(raw_dir: Path, n_files: int = 20, n_points: int = 100) -> np.ndarray:
+    wav_files = sorted(raw_dir.glob("*.wav"))[:n_files]
+
+    pitch_vectors = []
+
+    for wav_path in wav_files:
+        pitch_vector = process_utterance(wav_path, n_points)
+        pitch_vectors.append(pitch_vector)
+
+    return np.vstack(pitch_vectors)
+
+def analyze_dataset(X: np.ndarray) -> None:
+    grid = np.linspace(0, 1, X.shape[1])
+
+    mean_contour = X.mean(axis=0)
+    std_contour = X.std(axis=0)
+
+    plt.figure(figsize=(8,4))
+    plt.plot(grid, mean_contour, linewidth=2, label="Mean")
+
+    plt.fill_between(
+        grid,
+        mean_contour - std_contour,
+        mean_contour + std_contour,
+        alpha=0.3,
+        label="±1 Std Dev"
+    )
+
+    plt.title("Mean Pitch Contour")
+    plt.xlabel("Normalized Time")
+    plt.ylabel("F0 (Hz)")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_pitch(df: pd.DataFrame, time_col: str, pitch_col: str, title: str = "Pitch Contour") -> None:
     plt.figure(figsize=(8, 4))
     plt.plot(df[time_col], df[pitch_col])
@@ -89,52 +143,25 @@ def export_pitch_csv(df: pd.DataFrame, output_path: Path) -> None:
 
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent
-    FILENAME = "VOICEACTRESS100_002.wav"
 
-    audio_file = BASE_DIR / "data" / "raw_audio" / "jsut_ver1.1" / "jsut_ver1.1" / "voiceactress100" / "wav" / FILENAME
-    output_file = BASE_DIR / "data" / "processed" / "example_pitch.csv"
+    raw_dir = (
+        BASE_DIR
+        / "data"
+        / "raw_audio"
+        / "jsut_ver1.1"
+        / "jsut_ver1.1"
+        / "voiceactress100"
+        / "wav"
+    )
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
+    # Build dataset of pitch vectors
+    X = build_dataset(
+        raw_dir=raw_dir,
+        n_files=20,
+        n_points=100
+    )
 
-    df_pitch = extract_pitch(audio_file)
-    df_pitch = clean_pitch(df_pitch)
-    df_pitch = normalize_time(df_pitch)
+    print("Dataset shape:", X.shape)
 
-    df_resampled = resample_to_fixed_grid(df_pitch, n_points=100)
-    pitch_vector = df_resampled["f0_resampled"].values
-    print(pitch_vector.shape)
-
-    raw_dir = BASE_DIR / "data" / "raw_audio" / "jsut_ver1.1" / "jsut_ver1.1" / "voiceactress100" / "wav"
-
-    wav_files = sorted(raw_dir.glob("*.wav"))[:20]
-
-    pitch_vectors = []
-
-    for wav_path in wav_files:
-        df_pitch = extract_pitch(wav_path)
-        df_pitch = clean_pitch(df_pitch)
-        df_pitch = normalize_time(df_pitch)
-        df_resampled = resample_to_fixed_grid(df_pitch, n_points=100)
-
-        pitch_vector = df_resampled["f0_resampled"].values
-        pitch_vectors.append(pitch_vector)
-
-    X = np.vstack(pitch_vectors)
-
-    print("Shape of dataset:", X.shape)
-    
-    mean_contour = X.mean(axis=0)
-
-    grid = np.linspace(0, 1, 100)
-
-    plt.figure(figsize=(8,4))
-    plt.plot(grid, mean_contour, linewidth=2)
-    plt.title("Mean Pitch Contour (20 Utterances)")
-    plt.xlabel("Normalized Time")
-    plt.ylabel("F0 (Hz)")
-    plt.tight_layout()
-    plt.show()
-
-    export_pitch_csv(df_pitch, output_file)
-
-    print(f"Pitch extraction complete. Saved to {output_file}")
+    # Analyze dataset (mean + variance band)
+    analyze_dataset(X)

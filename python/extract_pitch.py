@@ -128,6 +128,33 @@ def analyze_dataset(X: np.ndarray) -> None:
     plt.tight_layout()
     plt.show()
 
+def analyze_variation_pca(X: np.ndarray, n_components: int = 2) -> None:
+    grid = np.linspace(0, 1, X.shape[1])
+
+    # Center dataset
+    mean_contour = X.mean(axis=0)
+    X_centered = X - mean_contour
+
+    # SVD
+    U, S, Vt = np.linalg.svd(X_centered, full_matrices=False)
+
+    plt.figure(figsize=(8,4))
+
+    for i in range(n_components):
+        plt.plot(grid, Vt[i], label=f"PC {i+1}")
+
+    plt.title("Principal Modes of Pitch Variation")
+    plt.xlabel("Normalized Time")
+    plt.ylabel("Mode Amplitude")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # Optional: print variance explained
+    variance_explained = (S**2) / np.sum(S**2)
+    print("Variance explained:")
+    for i in range(n_components):
+        print(f"PC {i+1}: {variance_explained[i]:.3f}")
 
 def plot_pitch(df: pd.DataFrame, time_col: str, pitch_col: str, title: str = "Pitch Contour") -> None:
     plt.figure(figsize=(8, 4))
@@ -165,3 +192,4 @@ if __name__ == "__main__":
 
     # Analyze dataset (mean + variance band)
     analyze_dataset(X)
+    analyze_variation_pca(X, n_components=2)

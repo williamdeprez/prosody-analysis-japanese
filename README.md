@@ -8,8 +8,12 @@ Using Python, I extract the pitch (fundamental frequency) from audio recordings 
 
 The goal is to analyze patterns in speech intonation using interpretable signal-processing methods — not speech recognition or machine learning.
 
+## Dataset
+
+Using [JSUT (Japanese speech corpus of Saruwatari-lab., University of Tokyo)](https://sites.google.com/site/shinnosuketakamichi/publication/jsut) for sample data presently. Future plans to use personal recordings for more specific utterances.
+
 ## Mean Pitch Contour
 
 This figure shows the mean pitch contour computed from 20 distinct utterances. Each utterance was normalized to the interval [0,1] and resampled to 100 time points before averaging.
 
-![Alt text](assets/Figure_1.png)
+![Mean Pitch Contour](assets/Figure_1.png)

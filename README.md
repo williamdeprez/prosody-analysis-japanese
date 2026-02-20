@@ -17,3 +17,7 @@ Using [JSUT (Japanese speech corpus of Saruwatari-lab., University of Tokyo)](ht
 This figure shows the mean pitch contour computed from 20 distinct utterances. Each utterance was normalized to the interval [0,1] and resampled to 100 time points before averaging.
 
 ![Mean Pitch Contour](assets/Figure_1.png)
+
+# Future goals
+- Pitch comparisons on words for different speakers
+- pitch analysis to understand individual words and their specific utterances

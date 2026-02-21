@@ -156,6 +156,29 @@ def analyze_variation_pca(X: np.ndarray, n_components: int = 2) -> None:
     for i in range(n_components):
         print(f"PC {i+1}: {variance_explained[i]:.3f}")
 
+def compute_declination_slope(X: np.ndarray) -> np.ndarray:
+    n_points = X.shape[1]
+    t = np.linspace(0, 1, n_points)
+
+    slopes = []
+
+    for row in X:
+        coef = np.polyfit(t, row, 1)
+        slopes.append(coef[0])  # slope
+
+    return np.array(slopes)
+
+def plot_slope_histogram(slopes: np.ndarray) -> None:
+    plt.figure(figsize=(6,4))
+    plt.hist(slopes, bins=15)
+    plt.axvline(slopes.mean(), linestyle="--", label="Mean")
+    plt.title("Distribution of Pitch Declination Slopes")
+    plt.xlabel("Slope (Hz per normalized time)")
+    plt.ylabel("Count")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
 def plot_pitch(df: pd.DataFrame, time_col: str, pitch_col: str, title: str = "Pitch Contour") -> None:
     plt.figure(figsize=(8, 4))
     plt.plot(df[time_col], df[pitch_col])
@@ -184,12 +207,20 @@ if __name__ == "__main__":
     # Build dataset of pitch vectors
     X = build_dataset(
         raw_dir=raw_dir,
-        n_files=20,
+        n_files=100,
         n_points=100
     )
+
+    slopes = compute_declination_slope(X)
+
+    print("Mean slope:", slopes.mean())
+    print("Std slope:", slopes.std())
+
+    print(f"n pos slopes: {(slopes > 0).sum()}")
+    plot_slope_histogram(slopes=slopes)
 
     print("Dataset shape:", X.shape)
 
     # Analyze dataset (mean + variance band)
-    analyze_dataset(X)
-    analyze_variation_pca(X, n_components=2)
+    # analyze_dataset(X)
+    # analyze_variation_pca(X, n_components=2)
